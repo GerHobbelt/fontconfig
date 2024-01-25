@@ -107,8 +107,13 @@ usage (char *program, int error)
     exit (error);
 }
 
+
+#if defined(BUILD_MONOLITHIC)
+#define main   fc_validate_main
+#endif
+
 int
-main (int argc, char **argv)
+main (int argc, const char **argv)
 {
     int		index_set = 0;
     int		set_index = 0;

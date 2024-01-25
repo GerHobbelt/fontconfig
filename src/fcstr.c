@@ -84,7 +84,7 @@ FcStrFree (FcChar8 *s)
 }
 
 
-#include "../fc-case/fccase.h"
+#include "fc-case/fccase.h"
 
 #define FcCaseFoldUpperCount(cf) \
     ((cf)->method == FC_CASE_FOLD_FULL ? 1 : (cf)->count)
@@ -1211,7 +1211,7 @@ FcStrCanonFilename (const FcChar8 *s)
 {
 #ifdef _WIN32
     FcChar8 full[FC_MAX_FILE_LEN + 2];
-    int size = GetFullPathName ((LPCSTR) s, sizeof (full) -1,
+    int size = GetFullPathNameA ((LPCSTR) s, sizeof (full) -1,
 				(LPSTR) full, NULL);
 
     if (size == 0)

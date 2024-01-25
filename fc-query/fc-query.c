@@ -79,7 +79,7 @@ extern int optind, opterr, optopt;
 #endif
 
 static void
-usage (char *program, int error)
+usage (const char *program, int error)
 {
     FILE *file = error ? stderr : stdout;
 #if HAVE_GETOPT_LONG
@@ -107,8 +107,13 @@ usage (char *program, int error)
     exit (error);
 }
 
+
+#if defined(BUILD_MONOLITHIC)
+#define main   fc_query_main
+#endif
+
 int
-main (int argc, char **argv)
+main (int argc, const char **argv)
 {
     unsigned int id = (unsigned int) -1;
     int         brief = 0;

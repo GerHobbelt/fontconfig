@@ -59,7 +59,7 @@
 #undef  _GNU_SOURCE
 #define _GNU_SOURCE
 #include <getopt.h>
-const struct option longopts[] = {
+static const struct option longopts[] = {
     {"verbose", 0, 0, 'v'},
     {"brief", 0, 0, 'b'},
     {"format", 1, 0, 'f'},
@@ -76,7 +76,7 @@ extern int optind, opterr, optopt;
 #endif
 
 static void
-usage (char *program, int error)
+usage (const char *program, int error)
 {
     FILE *file = error ? stderr : stdout;
 #if HAVE_GETOPT_LONG
@@ -106,8 +106,13 @@ usage (char *program, int error)
     exit (error);
 }
 
+
+#if defined(BUILD_MONOLITHIC)
+#define main   fc_list_main
+#endif
+
 int
-main (int argc, char **argv)
+main (int argc, const char **argv)
 {
     int			verbose = 0;
     int			brief = 0;

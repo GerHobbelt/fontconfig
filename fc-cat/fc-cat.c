@@ -63,7 +63,7 @@
 #undef  _GNU_SOURCE
 #define _GNU_SOURCE
 #include <getopt.h>
-const struct option longopts[] = {
+static const struct option longopts[] = {
     {"version", 0, 0, 'V'},
     {"verbose", 0, 0, 'v'},
     {"recurse", 0, 0, 'r'},
@@ -155,7 +155,7 @@ write_string (FILE *f, const FcChar8 *string)
 }
 
 static void
-usage (char *program, int error)
+usage (const char *program, int error)
 {
     FILE *file = error ? stderr : stdout;
 #if HAVE_GETOPT_LONG
@@ -256,8 +256,13 @@ bail2:
     return FcFalse;
 }
 
+
+#if defined(BUILD_MONOLITHIC)
+#define main   fc_cat_main
+#endif
+
 int
-main (int argc, char **argv)
+main (int argc, const char **argv)
 {
     int		i;
     int		ret = 0;

@@ -2451,7 +2451,7 @@ FcConfigGetPath (void)
 	if (fontconfig_path[0] == '\0')
 	{
 		char *p;
-		if(!GetModuleFileName(NULL, (LPCH) fontconfig_path, sizeof(fontconfig_path)))
+		if(!GetModuleFileNameA(NULL, (LPCH) fontconfig_path, sizeof(fontconfig_path)))
 			goto bail1;
 		p = strrchr ((const char *) fontconfig_path, '\\');
 		if (p) *p = '\0';

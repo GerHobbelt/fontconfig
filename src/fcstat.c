@@ -82,7 +82,7 @@ FcStat (const FcChar8 *file, struct stat *statb)
     char *basename;
     DWORD rc;
 
-    if (!GetFileAttributesEx ((LPCSTR) file, GetFileExInfoStandard, &wfad))
+    if (!GetFileAttributesExA ((LPCSTR) file, GetFileExInfoStandard, &wfad))
 	return -1;
 
     statb->st_dev = 0;
@@ -91,11 +91,11 @@ FcStat (const FcChar8 *file, struct stat *statb)
      * Call GetLongPathName() to get the spelling of the path name as it
      * is on disk.
      */
-    rc = GetFullPathName ((LPCSTR) file, sizeof (full_path_name), full_path_name, &basename);
+    rc = GetFullPathNameA ((LPCSTR) file, sizeof (full_path_name), full_path_name, &basename);
     if (rc == 0 || rc > sizeof (full_path_name))
 	return -1;
 
-    rc = GetLongPathName (full_path_name, full_path_name, sizeof (full_path_name));
+    rc = GetLongPathNameA (full_path_name, full_path_name, sizeof (full_path_name));
     statb->st_ino = FcStringHash ((const FcChar8 *) full_path_name);
 
     statb->st_mode = _S_IREAD | _S_IWRITE;

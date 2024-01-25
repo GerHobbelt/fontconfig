@@ -1346,7 +1346,7 @@ _get_real_paths_from_prefix(FcConfigParse *parse, const FcChar8 *path, const FcC
     {
 	FcChar8 *p;
 	path = buffer;
-	if (!GetModuleFileName (NULL, (LPCH) buffer, sizeof (buffer) - 20))
+	if (!GetModuleFileNameA (NULL, (LPCH) buffer, sizeof (buffer) - 20))
 	{
 	    FcConfigMessage (parse, FcSevereError, "GetModuleFileName failed");
 	    return NULL;
@@ -1365,7 +1365,7 @@ _get_real_paths_from_prefix(FcConfigParse *parse, const FcChar8 *path, const FcC
     {
 	FcChar8 *p;
 	path = buffer;
-	if (!GetModuleFileName (NULL, (LPCH) buffer, sizeof (buffer) - 20))
+	if (!GetModuleFileNameA (NULL, (LPCH) buffer, sizeof (buffer) - 20))
 	{
 	    FcConfigMessage (parse, FcSevereError, "GetModuleFileName failed");
 	    return NULL;
@@ -2425,7 +2425,7 @@ FcParseCacheDir (FcConfigParse *parse)
 	    FcConfigMessage (parse, FcSevereError, "out of memory");
 	    goto bail;
 	}
-	rc = GetTempPath (800, (LPSTR) data);
+	rc = GetTempPathA (800, (LPSTR) data);
 	if (rc == 0 || rc > 800)
 	{
 	    FcConfigMessage (parse, FcSevereError, "GetTempPath failed");
