@@ -79,7 +79,7 @@ extern int optind, opterr, optopt;
 #endif
 
 static void
-usage (char *program, int error)
+usage (const char *program, int error)
 {
     FILE *file = error ? stderr : stdout;
 #if HAVE_GETOPT_LONG
