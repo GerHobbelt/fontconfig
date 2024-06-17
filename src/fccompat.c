@@ -297,7 +297,7 @@ FcReadLink (const FcChar8 *pathname,
 struct DIR {
     struct dirent d_ent;
     HANDLE handle;
-    WIN32_FIND_DATA fdata;
+    WIN32_FIND_DATAW fdata;
     FcBool valid;
 };
 
@@ -307,6 +307,7 @@ FcCompatOpendirWin32 (const char *dirname)
     size_t len;
     char *name;
     DIR *dir;
+    WCHAR wide_buffer[FC_MAX_FILE_LEN];
 
     dir = calloc (1, sizeof (struct DIR));
     if (dir == NULL)
@@ -324,7 +325,9 @@ FcCompatOpendirWin32 (const char *dirname)
     name[len++] = '*';
     name[len] = '\0';
 
-    dir->handle = FindFirstFileEx (name, FindExInfoBasic, &dir->fdata, FindExSearchNameMatch, NULL, 0);
+    if (MultiByteToWideChar (CP_UTF8, 0, (LPSTR)name, -1, wide_buffer, FC_MAX_FILE_LEN) == 0)
+    return NULL;
+    dir->handle = FindFirstFileExW (wide_buffer, FindExInfoBasic, &dir->fdata, FindExSearchNameMatch, NULL, 0);
 
     free (name);
 
@@ -346,10 +349,16 @@ FcCompatOpendirWin32 (const char *dirname)
 FcPrivate struct dirent *
 FcCompatReaddirWin32 (DIR *dir)
 {
+    size_t len;
+
     if (dir->valid != FcTrue)
         return NULL;
 
-    dir->d_ent.d_name = dir->fdata.cFileName;
+    len = WideCharToMultiByte(CP_UTF8, 0, dir->fdata.cFileName, -1, NULL, 0, NULL, NULL);
+    dir->d_ent.d_name = malloc(len + 3);
+
+    if(WideCharToMultiByte(CP_UTF8, 0, dir->fdata.cFileName, -1, (LPSTR)dir->d_ent.d_name, len+3, NULL, NULL) == 0)
+        return NULL;
 
     if ((dir->fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
         dir->d_ent.d_type = DT_DIR;
@@ -358,7 +367,7 @@ FcCompatReaddirWin32 (DIR *dir)
     else
         dir->d_ent.d_type = DT_UNKNOWN;
 
-    if (!FindNextFile (dir->handle, &dir->fdata))
+    if (!FindNextFileW (dir->handle, &dir->fdata))
         dir->valid = FcFalse;
 
     return &dir->d_ent;

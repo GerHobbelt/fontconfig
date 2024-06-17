@@ -127,29 +127,35 @@ retry:
     if (!prgname)
     {
 #ifdef _WIN32
-	char buf[MAX_PATH+1];
+	WCHAR buf[MAX_PATH];
 
-	/* TODO This is ASCII-only; fix it. */
-	if (GetModuleFileNameA (GetModuleHandle (NULL), buf, sizeof (buf) / sizeof (buf[0])) > 0)
+# if !defined(WINAPI_FAMILY) || !(WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+	if (GetModuleFileNameW (GetModuleHandle (NULL), buf, sizeof (buf) / sizeof (buf[0])) > 0)
+# else
+	if (GetModuleFileNameW (GetCurrentProcess (), buf, sizeof(buf) / sizeof(buf[0])) > 0)
+# endif
 	{
-	    char *p;
+	    WCHAR *p;
 	    unsigned int len;
+        char buf2[MAX_PATH];
 
-	    p = strrchr (buf, '\\');
+	    p = wcsrchr (buf, L'\\');
 	    if (p)
 		p++;
 	    else
 		p = buf;
 
-	    len = strlen (p);
+	    len = wcslen (p);
 
-	    if (len > 4 && 0 == strcmp (p + len - 4, ".exe"))
+	    if (len > 4 && 0 == wcscmp (p + len - 4, L".exe"))
 	    {
 		len -= 4;
-		buf[len] = '\0';
+		buf[len] = L'\0';
 	    }
-
-	    prgname = FcStrdup (p);
+        if (WideCharToMultiByte (CP_UTF8, 0, p, len, buf2, MAX_PATH, NULL, NULL) != 0)
+        {
+        prgname = FcStrdup(buf2);
+        }
 	}
 #elif defined (HAVE_GETPROGNAME)
 	const char *q = getprogname ();

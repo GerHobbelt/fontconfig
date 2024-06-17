@@ -57,10 +57,9 @@
 #endif /* ENABLE_LIBXML2 */
 
 #ifdef _WIN32
+#include <Shlobj.h>
 #include <mbstring.h>
 extern FcChar8 fontconfig_instprefix[];
-pfnGetSystemWindowsDirectory pGetSystemWindowsDirectory = NULL;
-pfnSHGetFolderPathA pSHGetFolderPathA = NULL;
 static void
 _ensureWin32GettersReady();
 #endif
@@ -1344,9 +1343,10 @@ _get_real_paths_from_prefix(FcConfigParse *parse, const FcChar8 *path, const FcC
 #else
     if (strcmp ((const char *) path, "CUSTOMFONTDIR") == 0)
     {
-	FcChar8 *p;
+	WCHAR *p;
+    WCHAR wide_buffer[1000];
 	path = buffer;
-	if (!GetModuleFileNameA (NULL, (LPCH) buffer, sizeof (buffer) - 20))
+	if (!GetModuleFileNameW (NULL, wide_buffer, sizeof (buffer) / sizeof (buffer[0]) - 20))
 	{
 	    FcConfigMessage (parse, FcSevereError, "GetModuleFileName failed");
 	    return NULL;
@@ -1357,47 +1357,63 @@ _get_real_paths_from_prefix(FcConfigParse *parse, const FcChar8 *path, const FcC
 	 * pages have characters with backslash as the second
 	 * byte.
 	 */
-	p = _mbsrchr (path, '\\');
-	if (p) *p = '\0';
+	p = wcsrchr (wide_buffer, L'\\');
+	if (p) *p = L'\0';
+    if (WideCharToMultiByte (CP_UTF8, 0, wide_buffer, -1, (LPSTR) buffer, 1000, NULL, NULL) == 0)
+	return NULL;
 	strcat ((char *) path, "\\fonts");
     }
     else if (strcmp ((const char *) path, "APPSHAREFONTDIR") == 0)
     {
-	FcChar8 *p;
+	WCHAR *p;
+    WCHAR wide_buffer[1000];
 	path = buffer;
-	if (!GetModuleFileNameA (NULL, (LPCH) buffer, sizeof (buffer) - 20))
+	if (!GetModuleFileNameW (NULL, wide_buffer, sizeof (buffer) / sizeof (buffer[0]) - 20))
 	{
 	    FcConfigMessage (parse, FcSevereError, "GetModuleFileName failed");
-	    return NULL;
+		return NULL;
 	}
-	p = _mbsrchr (path, '\\');
-	if (p) *p = '\0';
+    p = wcsrchr(wide_buffer, L'\\');
+	if (p) *p = L'\0';
+    if (WideCharToMultiByte (CP_UTF8, 0, wide_buffer, -1, (LPSTR) buffer, 1000, NULL, NULL) == 0)
+    return NULL;
 	strcat ((char *) path, "\\..\\share\\fonts");
     }
     else if (strcmp ((const char *) path, "WINDOWSUSERFONTDIR") == 0)
     {
         path = buffer;
-        if (!(pSHGetFolderPathA && SUCCEEDED(pSHGetFolderPathA(NULL, /* CSIDL_LOCAL_APPDATA */ 28, NULL, 0, (char *) buffer))))
+        WCHAR wide_buffer[MAX_PATH + 1];
+# if !defined(WINAPI_FAMILY) || !(WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+	    if (!(SUCCEEDED(SHGetFolderPathW (NULL, /* CSIDL_LOCAL_APPDATA */ 28, NULL, 0, wide_buffer))))
+# endif
         {
-            FcConfigMessage(parse, FcSevereError, "SHGetFolderPathA failed");
+            FcConfigMessage(parse, FcSevereError, "SHGetFolderPath failed");
             return NULL;
         }
+	    if (WideCharToMultiByte (CP_UTF8, 0, wide_buffer, -1, (LPSTR) path, MAX_PATH, NULL, NULL) == 0)
+	    return NULL;
         strcat((char *) path, "\\Microsoft\\Windows\\Fonts");
     }
     else if (strcmp ((const char *) path, "WINDOWSFONTDIR") == 0)
     {
 	int rc;
+    WCHAR wide_buffer[1000];
 	path = buffer;
-	_ensureWin32GettersReady();
-	rc = pGetSystemWindowsDirectory ((LPSTR) buffer, sizeof (buffer) - 20);
-	if (rc == 0 || rc > sizeof (buffer) - 20)
+#   if !defined(WINAPI_FAMILY) || !(WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+	rc = GetSystemWindowsDirectoryW (wide_buffer, sizeof (wide_buffer) / sizeof (wide_buffer[0]) - 20);
+	if (rc == 0 || rc > sizeof(wide_buffer) / sizeof(wide_buffer[0]) - 20)
 	{
 	    FcConfigMessage (parse, FcSevereError, "GetSystemWindowsDirectory failed");
 	    return NULL;
 	}
+	if (WideCharToMultiByte (CP_UTF8, 0, wide_buffer, rc, (LPSTR) buffer, 1000, NULL, NULL) == 0)
+		return NULL;
 	if (path [strlen ((const char *) path) - 1] != '\\')
 	    strcat ((char *) path, "\\");
 	strcat ((char *) path, "fonts");
+#else
+	path = "C:\\Windows\\fonts";
+#endif
     }
     else
     {
@@ -2417,7 +2433,7 @@ FcParseCacheDir (FcConfigParse *parse)
     else if (strcmp ((const char *) data, "WINDOWSTEMPDIR_FONTCONFIG_CACHE") == 0)
     {
 	int rc;
-
+    WCHAR wide_buffer[800];
 	FcStrFree (data);
 	data = malloc (1000);
 	if (!data)
@@ -2425,12 +2441,14 @@ FcParseCacheDir (FcConfigParse *parse)
 	    FcConfigMessage (parse, FcSevereError, "out of memory");
 	    goto bail;
 	}
-	rc = GetTempPathA (800, (LPSTR) data);
+	rc = GetTempPathW (800, wide_buffer);
 	if (rc == 0 || rc > 800)
 	{
 	    FcConfigMessage (parse, FcSevereError, "GetTempPath failed");
 	    goto bail;
 	}
+    if (WideCharToMultiByte (CP_UTF8, 0, wide_buffer, rc, (LPSTR) data, 1000, NULL, NULL) == 0)
+    goto bail;
 	if (data [strlen ((const char *) data) - 1] != '\\')
 	    strcat ((char *) data, "\\");
 	strcat ((char *) data, "fontconfig\\cache");
@@ -2438,13 +2456,18 @@ FcParseCacheDir (FcConfigParse *parse)
     else if (strcmp ((const char *) data, "LOCAL_APPDATA_FONTCONFIG_CACHE") == 0)
     {
 	char szFPath[MAX_PATH + 1];
+    WCHAR wide_buffer[MAX_PATH + 1];
 	size_t len;
 
-	if (!(pSHGetFolderPathA && SUCCEEDED(pSHGetFolderPathA(NULL, /* CSIDL_LOCAL_APPDATA */ 28, NULL, 0, szFPath))))
+# if !defined(WINAPI_FAMILY) || !(WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+	if (!(SUCCEEDED(SHGetFolderPathW (NULL, /* CSIDL_LOCAL_APPDATA */ 28, NULL, 0, wide_buffer))))
+# endif
 	{
-	    FcConfigMessage (parse, FcSevereError, "SHGetFolderPathA failed");
+	    FcConfigMessage (parse, FcSevereError, "SHGetFolderPath failed");
 	    goto bail;
 	}
+    if (WideCharToMultiByte (CP_UTF8, 0, wide_buffer, -1, (LPSTR) szFPath, MAX_PATH, NULL, NULL) == 0)
+    goto bail;
 	strncat(szFPath, "\\fontconfig\\cache", MAX_PATH - 1 - strlen(szFPath));
 	len = strlen(szFPath) + 1;
 	FcStrFree (data);
@@ -3734,19 +3757,6 @@ FcConfigParseAndLoadFromMemory (FcConfig       *config,
 static void
 _ensureWin32GettersReady()
 {
-    if (!pGetSystemWindowsDirectory)
-    {
-        HMODULE hk32 = GetModuleHandleA("kernel32.dll");
-        if (!(pGetSystemWindowsDirectory = (pfnGetSystemWindowsDirectory)GetProcAddress(hk32, "GetSystemWindowsDirectoryA")))
-            pGetSystemWindowsDirectory = (pfnGetSystemWindowsDirectory)GetWindowsDirectory;
-    }
-    if (!pSHGetFolderPathA)
-    {
-        HMODULE hSh = LoadLibraryA("shfolder.dll");
-        /* the check is done later, because there is no provided fallback */
-        if (hSh)
-            pSHGetFolderPathA = (pfnSHGetFolderPathA)GetProcAddress(hSh, "SHGetFolderPathA");
-    }
 }
 #endif // _WIN32
 

@@ -67,10 +67,6 @@
 
 #ifdef _WIN32
 #  include "fcwindows.h"
-typedef UINT (WINAPI *pfnGetSystemWindowsDirectory)(LPSTR, UINT);
-typedef HRESULT (WINAPI *pfnSHGetFolderPathA)(HWND, int, HANDLE, DWORD, LPSTR);
-extern pfnGetSystemWindowsDirectory pGetSystemWindowsDirectory;
-extern pfnSHGetFolderPathA pSHGetFolderPathA;
 #  define FC_SEARCH_PATH_SEPARATOR ';'
 #  define FC_DIR_SEPARATOR         '\\'
 #  define FC_DIR_SEPARATOR_S       "\\"
