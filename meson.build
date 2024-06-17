@@ -4,6 +4,8 @@ project('fontconfig', 'c',
   default_options: [ 'buildtype=debugoptimized'],
 )
 
+fs = import('fs')
+
 fc_version = meson.project_version()
 version_arr = fc_version.split('.')
 fc_version_major = version_arr[0].to_int()
@@ -34,6 +36,19 @@ if not freetype_dep.found()
   freetype_dep = dependency('freetype', method: 'cmake', version: freetype_req_cmake,
     fallback: ['freetype2', 'freetype_dep'], default_options: 'werror=false')
 endif
+
+if freetype_dep.type_name() == 'internal'
+  conf.set('FREETYPE_PCF_LONG_FAMILY_NAMES', false)
+else
+  if cc.compiles(files('meson-cc-tests/freetype-pcf-long-family-names.c'),
+		         dependencies: freetype_dep)
+    conf.set('FREETYPE_PCF_LONG_FAMILY_NAMES', true)
+  else
+    conf.set('FREETYPE_PCF_LONG_FAMILY_NAMES', false)
+  endif
+endif
+
+jsonc_dep = dependency('json-c', required: false)
 
 xml_dep = dependency('', required: false)
 xmlbackend = get_option('xml-backend')
@@ -159,6 +174,12 @@ conf.set_quoted('PACKAGE_VERSION', meson.project_version())
 conf.set_quoted('PACKAGE_STRING', '@0@ @1@'.format(meson.project_name(), meson.project_version()))
 conf.set_quoted('PACKAGE_BUGREPORT', 'https://gitlab.freedesktop.org/fontconfig/fontconfig/issues/new')
 conf.set_quoted('PACKAGE_URL', '')
+
+if host_machine.system() == 'windows'
+  conf.set('EXEEXT', '.exe')
+else
+  conf.set('EXEEXT', '')
+endif
 
 i18n = import('i18n')
 gettext_args = [ '--msgid-bugs-address=@0@'.format(conf.get('PACKAGE_BUGREPORT')) ]
@@ -438,10 +459,7 @@ foreach t : ['uint64_t', 'int32_t', 'uintptr_t', 'intptr_t']
   endif
 endforeach
 
-fcstdint_h = configure_file(
-  input: 'src/fcstdint.h.in',
-  output: 'fcstdint.h',
-  copy: true)
+fcstdint_h = fs.copyfile('src/fcstdint.h.in', 'fcstdint.h')
 
 makealias = files('src/makealias.py')[0]
 
