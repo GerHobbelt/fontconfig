@@ -62,7 +62,7 @@ extern FcChar8 fontconfig_instprefix[];
 pfnGetSystemWindowsDirectory pGetSystemWindowsDirectory = NULL;
 pfnSHGetFolderPathA pSHGetFolderPathA = NULL;
 static void
-_ensureWin32GettersReady();
+_ensureWin32GettersReady(void);
 #endif
 
 static FcChar8  *__fc_userdir = NULL;
@@ -3732,7 +3732,7 @@ FcConfigParseAndLoadFromMemory (FcConfig       *config,
 
 #ifdef _WIN32
 static void
-_ensureWin32GettersReady()
+_ensureWin32GettersReady(void)
 {
     if (!pGetSystemWindowsDirectory)
     {
